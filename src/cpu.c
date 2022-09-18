@@ -17,11 +17,14 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
- #include <avr/pgmspace.h>
+#if defined(ESP8266) || defined(ESP32)
+#include <pgmspace.h>
+#else
+#include <avr/pgmspace.h>
+#endif
 #include "cpu.h"
 #include "hw.h"
 #include "hal.h"
-//#include "rom_new.h"
 #include "rom_12bit.h"
 
 #define CPU_SPEED_RATIO      0
