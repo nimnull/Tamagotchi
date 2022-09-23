@@ -20,33 +20,13 @@
 
 #include <U8g2lib.h>
 #include <Wire.h>
-#include <EEPROM.h>
+
 #include "tamalib.h"
 #include "hw.h"
 #include "bitmaps.h"
-#include "hardcoded_state.h"
-
-/***** U8g2 SSD1306 Library Setting *****/
-#define DISPLAY_I2C_ADDRESS 0x3C
-#define SCREEN_WIDTH 128 // OLED display width, in pixels
-#define SCREEN_HEIGHT 64 // OLED display height, in pixels
-/****************************************/
-
-/***** Tama Setting and Features *****/
-#if defined(ESP8266) || defined(ESP32)
-#define TAMA_DISPLAY_FRAMERATE 8
-#else
-#define TAMA_DISPLAY_FRAMERATE 3 // 3 is optimal for Arduino UNO
+#if defined(ENABLE_AUTO_SAVE_STATUS) || defined(ENABLE_LOAD_STATE_FROM_EEPROM)
+#include "savestate.h"
 #endif
-#define ENABLE_TAMA_SOUND
-#define ENABLE_TAMA_SOUND_ACTIVE_LOW
-#define ENABLE_AUTO_SAVE_STATUS
-#define AUTO_SAVE_MINUTES 1 // Auto save for every hour (to preserve EEPROM lifespan)
-#define ENABLE_LOAD_STATE_FROM_EEPROM
-//#define ENABLE_DUMP_STATE_TO_SERIAL_WHEN_START
-//#define ENABLE_SERIAL_DEBUG_INPUT
-//#define ENABLE_LOAD_HARCODED_STATE_WHEN_START
-/***************************/
 
 /***** Set display orientation, U8G2_MIRROR_VERTICAL is not supported *****/
 #define U8G2_LAYOUT_NORMAL
@@ -67,9 +47,9 @@ U8G2_SSD1306_128X64_NONAME_2_HW_I2C display(U8G2_MIRROR);
 #endif
 
 #if defined(ESP8266)
-#define PIN_BTN_L 15
-#define PIN_BTN_M 12
-#define PIN_BTN_R 13
+#define PIN_BTN_L 12
+#define PIN_BTN_M 13
+#define PIN_BTN_R 15
 #define PIN_BTN_SAVE 0
 #define PIN_BUZZER 2
 #elif defined(ESP32)
@@ -87,12 +67,11 @@ U8G2_SSD1306_128X64_NONAME_2_HW_I2C display(U8G2_MIRROR);
 #endif
 
 void displayTama();
-void saveStateToEEPROM();
 
 /**** TamaLib Specific Variables ****/
 static uint16_t current_freq = 0;
 static bool_t matrix_buffer[LCD_HEIGHT][LCD_WIDTH / 8] = {{0}};
-static byte runOnceBool = 0;
+//static byte runOnceBool = 0;
 static bool_t icon_buffer[ICON_NUM] = {0};
 static cpu_state_t cpuState;
 static unsigned long lastSaveTimestamp = 0;
@@ -237,7 +216,7 @@ static int hal_handler(void)
   {
     if (button4state == 0)
     {
-      saveStateToEEPROM();
+      saveStateToEEPROM(&cpuState);
     }
     button4state = 1;
   }
@@ -398,74 +377,6 @@ void dumpStateToSerial()
 }
 #endif
 
-#ifdef ENABLE_LOAD_HARCODED_STATE_WHEN_START
-void loadHardcodedState()
-{
-  cpu_get_state(&cpuState);
-  u4_t *memTemp = cpuState.memory;
-  uint16_t i;
-  uint8_t *cpuS = (uint8_t *)&cpuState;
-  for (i = 0; i < sizeof(cpu_state_t); i++)
-  {
-    cpuS[i] = pgm_read_byte_near(hardcodedState + i);
-  }
-  for (i = 0; i < MEMORY_SIZE; i++)
-  {
-    memTemp[i] = pgm_read_byte_near(hardcodedState + sizeof(cpu_state_t) + i);
-  }
-  cpuState.memory = memTemp;
-  cpu_set_state(&cpuState);
-  Serial.println("Hardcoded");
-}
-#endif
-
-#ifdef ENABLE_AUTO_SAVE_STATUS
-void saveStateToEEPROM()
-{
-  int i = 0;
-  if (EEPROM.read(0) != 12)
-  {
-    // Clear EEPROM
-    for (i = 0; i < EEPROM.length(); i++)
-    {
-      EEPROM.write(i, 0);
-    }
-  }
-#if defined(ESP8266) || defined(ESP32)
-  EEPROM.write(0, 12);
-#else
-  EEPROM.update(0, 12);
-#endif
-  cpu_get_state(&cpuState);
-  EEPROM.put(1, cpuState);
-  for (i = 0; i < MEMORY_SIZE; i++)
-  {
-#if defined(ESP8266) || defined(ESP32)
-    EEPROM.write(1 + sizeof(cpu_state_t) + i, cpuState.memory[i]);
-#else
-    EEPROM.update(1 + sizeof(cpu_state_t) + i, cpuState.memory[i]);
-#endif
-  }
-  Serial.println("S");
-}
-#endif
-
-#ifdef ENABLE_LOAD_STATE_FROM_EEPROM
-void loadStateFromEEPROM()
-{
-  cpu_get_state(&cpuState);
-  u4_t *memTemp = cpuState.memory;
-  EEPROM.get(1, cpuState);
-  cpu_set_state(&cpuState);
-  int i = 0;
-  for (i = 0; i < MEMORY_SIZE; i++)
-  {
-    memTemp[i] = EEPROM.read(1 + sizeof(cpu_state_t) + i);
-  }
-  Serial.println("L");
-}
-#endif
-
 uint8_t reverseBits(uint8_t num)
 {
   uint8_t reverse_num = 0;
@@ -495,28 +406,25 @@ void setup()
   tamalib_set_framerate(TAMA_DISPLAY_FRAMERATE);
   tamalib_init(1000000);
 
-#ifdef ENABLE_LOAD_STATE_FROM_EEPROM
-  if (EEPROM.read(0) == 12)
-  {
-    loadStateFromEEPROM();
-  }
-#endif
+  initEEPROM();
 
-#ifdef ENABLE_LOAD_HARCODED_STATE_WHEN_START
+#ifdef ENABLE_LOAD_STATE_FROM_EEPROM
+  if (validEEPROM())
+  {
+    loadStateFromEEPROM(&cpuState);
+  } else {
+    Serial.println(F("No magic number in state, skipping state restore"));
+  }
+#elif ENABLE_LOAD_HARCODED_STATE_WHEN_START
   loadHardcodedState();
 #endif
-
-  /*
-    int i;
-    for(i=0;i<(18*8);i++) {
-      bitmaps_raw[i]= reverseBits(bitmaps_raw[i]);
-    }
-  */
 
 #ifdef ENABLE_DUMP_STATE_TO_SERIAL_WHEN_START
   dumpStateToSerial();
 #endif
 }
+
+uint32_t right_long_press_started = 0;
 
 void loop()
 {
@@ -525,7 +433,19 @@ void loop()
   if ((millis() - lastSaveTimestamp) > (AUTO_SAVE_MINUTES * 60 * 1000))
   {
     lastSaveTimestamp = millis();
-    saveStateToEEPROM();
+    saveStateToEEPROM(&cpuState);
+  }
+
+  if (digitalRead(PIN_BTN_R) == HIGH) {
+    if (millis() - right_long_press_started > AUTO_SAVE_MINUTES * 1000) 
+    {
+      eraseStateFromEEPROM();
+      #if defined(ESP8266) || defined(ESP32)
+      ESP.restart();
+      #endif
+    }
+  } else {
+    right_long_press_started = millis();
   }
 #endif
 }
