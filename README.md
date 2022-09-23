@@ -6,80 +6,38 @@
 
 ![Tamagotchi P1 Actual Devices](../main/images/TamaP1_devices.jpg)
 
-### Demonstration (click the photo to watch)
-[![Demo 1](https://img.youtube.com/vi/MJvAr_od06M/0.jpg)](https://www.youtube.com/watch?v=MJvAr_od06M)
-[![Demo 2](https://img.youtube.com/vi/ab3_0PLWAnc/0.jpg)](https://www.youtube.com/watch?v=ab3_0PLWAnc)
+## Fork notice
 
-## How to build
+I did following changes after forking [original repo](https://github.com/GaryZ88/ArduinoGotchi)
+- Created platformio project, so it is easy to target multiple platforms
+- Created ports for ESP8266 and ESP32, mainly because speed on 8-bit AVR is just too slow
+- Added long click on "back" button - if you press it for 5 seconds, it will reset memory back to egg state
+- Added inverted Speaker connection setting. Mainly because Piezo modules that I have are active on Low. Another reason is mention below.
 
-### Prerequisites
+I personally assembled ESP8266 version with Wemos D1 Mini on perfboard, using built-in LED together with speaker, so when it sounds, led is blinking as well.
 
-- **Git** - command line tool, please follows [Getting started installing Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
-- **Arduino IDE** - [Download and Install](https://www.arduino.cc/en/software)
-- **Java 8 Runtime** - [Download and install](https://www.oracle.com/java/technologies/javase/javase8-archive-downloads.html)
-- **Parts**
-  - Arduino UNO (also compatible with Arduino Micro, Arduino Nano, Arduino Mega)
-  - 1K resistor x 3
-  - Push button x 3
-  - Buzzer 
-  - SSD1306 I2C OLED 128x64  
-- **Tamagotchi P1 ROM** - ArduinoGotchi being an emulator, it requires a compatible Tamagotchi P1 ROM named 
-**rom.bin** and place it in the project folder. Due to the copyright issue, Rom file is not provided, you have to find it yourself
-- Clone this repository from Github into your PC, run the following commands:
-```
-git clone https://github.com/GaryZ88/ArduinoGotchi
-cd ArduinoGotchi
-```
+### Demo
+![Demo #1](/images/VID_20220923_205516.mp4.gif)
+![Demo #2](/images/VID_20220923_205528.mp4.gif)
+![Demo #3](/images/VID_20220923_205823.mp4.gif)
 
-### Preparing a ROM data file
-- Put the **rom.bin** in the project folder, i.e. /ArduinoGotchi/
-- Run the below commands, if success, it will generate a file named "**rom_12bit.h**" in the project folder
-```
-cd ArduinoGotchi
-java TamaRomConvert rom.bin
-```
+## How to build and run
 
-### Compile and Run 
-- Compose the electronic parts, please follow the circult diagram below
-- Launch Arduino IDE
-- Open "ArduinoGotchi.ino" in the project folder
-- Connect your Arduino UNO to PC/Mac with USB cable
-- Select your board
-  - Main Menu -> Tools -> Board -> Arduino AVR Boards -> Arduino UNO
-- Install U8g2 library
-  - Main Menu -> Sketch -> Include Library -> Manage Libraries
-  - Search "U8g2" and install
-- Click the "Upload" button
-![Compile and upload success](../main/images/Compile_and_upload.png)
+Use Platformio. Run `build` task to build for all platforms. Next run `Upload` task for specific platoform
 
 ### Additional notes
 - To activate your pet, you have to configure the clock by pressing the middle button. Otherwise, your pet will not alive.
-- The emulator will save the game status for every 60 mintues.
-- The speed of the emulator is a bit slower than the actual Tamagotchi device, still, it is fun.
-- There are a few settings in the main program (**ArduinoGotchi.ino**) that you can adjust to fit your need:
+- The emulator will save the game status for every 5 mintues. You can change that by changing AUTO_SAVE_MINUTES setting
+- The speed of the emulator is a bit slower than the actual Tamagotchi device on AVR, still, it is fun. On ESPs it runs smooth.
+- There are a few consts in the `platformio.ini` that you can adjust to fit your need:
 ```
-/***** U8g2 SSD1306 Library Setting *****/
-#define DISPLAY_I2C_ADDRESS 0x3C
-#define SCREEN_WIDTH 128 // OLED display width, in pixels
-#define SCREEN_HEIGHT 64 // OLED display height, in pixels
-/****************************************/
-
-/***** Tama Setting and Features *****/
-#define TAMA_DISPLAY_FRAMERATE  3   // 3 is optimal for Arduino UNO
-#define ENABLE_TAMA_SOUND
-#define ENABLE_AUTO_SAVE_STATUS
-#define AUTO_SAVE_MINUTES 60    // Auto save for every hour (to preserve EEPROM lifespan)
-#define ENABLE_LOAD_STATE_FROM_EEPROM 
-//#define ENABLE_DUMP_STATE_TO_SERIAL_WHEN_START
-//#define ENABLE_SERIAL_DEBUG_INPUT
-//#define ENABLE_LOAD_HARCODED_STATE_WHEN_START
-/***************************/
-
-/***** Set display orientation, U8G2_MIRROR_VERTICAL is not supported *****/
-#define U8G2_LAYOUT_NORMAL
-//#define U8G2_LAYOUT_ROTATE_180
-//#define U8G2_LAYOUT_MIRROR
-/**************************************************************************/
+  -D DISPLAY_I2C_ADDRESS=0x3C
+  -D SCREEN_WIDTH=128
+  -D SCREEN_HEIGHT=64
+  -D ENABLE_TAMA_SOUND
+  -D ENABLE_TAMA_SOUND_ACTIVE_LOW
+  -D ENABLE_AUTO_SAVE_STATUS
+  -D ENABLE_LOAD_STATE_FROM_EEPROM
 ```
 
 ### Circuit Diagram
