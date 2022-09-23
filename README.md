@@ -43,5 +43,12 @@ Use Platformio. Run `build` task to build for all platforms. Next run `Upload` t
 ### Circuit Diagram
 ![Circuit Diagram](../main/images/circuit_diagram_01.png)
 
+### Wemos D1 Mini
+
+![image](https://user-images.githubusercontent.com/5459747/192046441-1461c20e-b5f6-4a72-a79b-7815a77e1c00.png)
+![image](https://user-images.githubusercontent.com/5459747/192046464-36be5fc8-1893-4b04-a4e0-53a563c3ad33.png)
+![image](https://user-images.githubusercontent.com/5459747/192046512-4251114a-d74a-42fc-b67a-0f48a1a26ef4.png)
+![image](https://user-images.githubusercontent.com/5459747/192046612-6c835d33-e341-4386-8917-5823d573414d.png)
+
 ### License
 ArduinoGotchi is distributed under the GPLv2 license. See the LICENSE file for more information.
