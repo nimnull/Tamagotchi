@@ -29,8 +29,8 @@
 #endif
 
 /***** Set display orientation, U8G2_MIRROR_VERTICAL is not supported *****/
-#define U8G2_LAYOUT_NORMAL
-//#define U8G2_LAYOUT_ROTATE_180
+//#define U8G2_LAYOUT_NORMAL
+#define U8G2_LAYOUT_ROTATE_180
 //#define U8G2_LAYOUT_MIRROR
 /**************************************************************************/
 
@@ -46,23 +46,27 @@ U8G2_SSD1306_128X64_NONAME_2_HW_I2C display(U8G2_R2);
 U8G2_SSD1306_128X64_NONAME_2_HW_I2C display(U8G2_MIRROR);
 #endif
 
-#if defined(ESP8266)
+#if defined(ESP8266_KIT_A)
 #define PIN_BTN_L 12
 #define PIN_BTN_M 13
 #define PIN_BTN_R 15
-#define PIN_BTN_SAVE 0
 #define PIN_BUZZER 2
+#elif defined(ESP8266_KIT_B)
+#define PIN_BTN_L 12
+#define PIN_BTN_M 13
+#define PIN_BTN_R 15
+#define PIN_BUZZER 0
+#define ENABLE_TAMA_SOUND
+#define ENABLE_TAMA_SOUND_ACTIVE_LOW
 #elif defined(ESP32)
 #define PIN_BTN_L 255
 #define PIN_BTN_M 255
 #define PIN_BTN_R 255
-#define PIN_BTN_SAVE 255
 #define PIN_BUZZER 255
 #else
 #define PIN_BTN_L 2
 #define PIN_BTN_M 3
 #define PIN_BTN_R 4
-#define PIN_BTN_SAVE 5
 #define PIN_BUZZER 9
 #endif
 
@@ -211,20 +215,20 @@ static int hal_handler(void)
   {
     hw_set_button(BTN_RIGHT, BTN_STATE_RELEASED);
   }
-#ifdef ENABLE_AUTO_SAVE_STATUS
-  if (digitalRead(PIN_BTN_SAVE) == HIGH)
-  {
-    if (button4state == 0)
-    {
-      saveStateToEEPROM(&cpuState);
-    }
-    button4state = 1;
-  }
-  else
-  {
-    button4state = 0;
-  }
-#endif
+// #ifdef ENABLE_AUTO_SAVE_STATUS
+//   if (digitalRead(PIN_BTN_SAVE) == HIGH)
+//   {
+//     if (button4state == 0)
+//     {
+//       saveStateToEEPROM(&cpuState);
+//     }
+//     button4state = 1;
+//   }
+//   else
+//   {
+//     button4state = 0;
+//   }
+// #endif
 #endif
   return 0;
 }
@@ -396,11 +400,9 @@ void setup()
   pinMode(PIN_BTN_L, INPUT);
   pinMode(PIN_BTN_M, INPUT);
   pinMode(PIN_BTN_R, INPUT);
-  pinMode(PIN_BTN_SAVE, INPUT);
   pinMode(PIN_BUZZER, OUTPUT);
 
-  display.setI2CAddress(DISPLAY_I2C_ADDRESS * 2); // required if display does not use default address of 0x3C
-  display.begin();                                // initialize U8g2 graphics library for selected display module
+  display.begin();
 
   tamalib_register_hal(&hal);
   tamalib_set_framerate(TAMA_DISPLAY_FRAMERATE);
@@ -436,7 +438,7 @@ void loop()
     saveStateToEEPROM(&cpuState);
   }
 
-  if (digitalRead(PIN_BTN_R) == HIGH) {
+  if (digitalRead(PIN_BTN_M) == HIGH) {
     if (millis() - right_long_press_started > AUTO_SAVE_MINUTES * 1000) 
     {
       eraseStateFromEEPROM();
