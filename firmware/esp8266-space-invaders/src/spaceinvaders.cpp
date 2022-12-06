@@ -8,11 +8,12 @@ unsigned long frameCount;
 unsigned int framesPerSecond;
 
 #ifdef BUZZER_ACTIVE_LOW
-#define NO_TONE(pin) noTone(pin); digitalWrite(pin, HIGH);
+#define NO_TONE(pin) \
+  noTone(pin);       \
+  digitalWrite(pin, HIGH);
 #else
 #define NO_TONE(pin) noTone(pin);
 #endif
-
 
 // alien global vars
 // The array of aliens across the screen
@@ -60,77 +61,83 @@ bool ShootCompleted = true; // stops music when this is false, so we can here sh
 
 void SpaceInvaders::init(void)
 {
-    display->setFont(u8g2_font_t0_11b_tf);
-    display->setDrawColor(1); // set the color
+  display->setFont(u8g2_font_t0_11b_tf);
+  display->setDrawColor(1); // set the color
 
-    EEPROM.get(0, HiScore);
-    if (HiScore == 65535) // new unit never written to
-    {
-        HiScore = 0;
-        EEPROM.put(0, HiScore);
-    }
+#if defined(ESP8266) || defined(ESP32)
+    EEPROM.begin(sizeof(unsigned int));
+#endif
+  EEPROM.get(0, HiScore);
+  if (HiScore == 65535) // new unit never written to
+  {
+    HiScore = 0;
+    EEPROM.put(0, HiScore);
+#if defined(ESP8266) || defined(ESP32)
+    EEPROM.commit();
+#endif
+  }
 
-    InitAliens(0);
-    InitPlayer();
+  InitAliens(0);
+  InitPlayer();
 }
 
 void SpaceInvaders::loop(void)
 {
-    if (GameInPlay) // NEW
-    {
-        Physics();
-        UpdateDisplay();
-    }
-    else
-        AttractScreen();
-    
-    NO_TONE(PIN_BUZZER);
+  if (GameInPlay) // NEW
+  {
+    Physics();
+    UpdateDisplay();
+  }
+  else
+    AttractScreen();
+
+  NO_TONE(PIN_BUZZER);
 }
 
 void SpaceInvaders::InitPlayer()
 {
-    Player.Ord.Y = PLAYER_Y_START;
-    Player.Ord.X = PLAYER_X_START;
-    Player.Ord.Status = ACTIVE;
-    Player.Lives = LIVES;
-    Player.Level = 0;
-    Missile.Status = DESTROYED;
-    Player.Score = 0;
+  Player.Ord.Y = PLAYER_Y_START;
+  Player.Ord.X = PLAYER_X_START;
+  Player.Ord.Status = ACTIVE;
+  Player.Lives = LIVES;
+  Player.Level = 0;
+  Missile.Status = DESTROYED;
+  Player.Score = 0;
 }
 
 void SpaceInvaders::InitBases()
-{ 
-    // Bases need to be re-built!
-    byte TheByte;
-    int Spacing = ((SCREEN_WIDTH - 32) - (NUM_BASES * BASE_WIDTH)) / NUM_BASES;
-    for (int i = 0; i < NUM_BASES; i++)
+{
+  // Bases need to be re-built!
+  byte TheByte;
+  int Spacing = ((SCREEN_WIDTH - 32) - (NUM_BASES * BASE_WIDTH)) / NUM_BASES;
+  for (int i = 0; i < NUM_BASES; i++)
+  {
+    for (int DataIdx = 0; DataIdx < BASE_HEIGHT; DataIdx++)
     {
-        for (int DataIdx = 0; DataIdx < BASE_HEIGHT; DataIdx++)
-        {
-            TheByte = pgm_read_byte(BaseGfx + DataIdx);
-            Base[i].Gfx[DataIdx] = TheByte;
-        }
-        Base[i].Ord.X = 17 + (i * Spacing) + (i * BASE_WIDTH) + (Spacing / 2);
-        Base[i].Ord.Y = BASE_Y;
-        Base[i].Ord.Status = ACTIVE;
+      TheByte = pgm_read_byte(BaseGfx + DataIdx);
+      Base[i].Gfx[DataIdx] = TheByte;
     }
+    Base[i].Ord.X = 17 + (i * Spacing) + (i * BASE_WIDTH) + (Spacing / 2);
+    Base[i].Ord.Y = BASE_Y;
+    Base[i].Ord.Status = ACTIVE;
+  }
 }
 
 void SpaceInvaders::InitAliens(int YStart)
 {
-    for (int across = 0; across < NUM_ALIEN_COLUMNS; across++)
+  for (int across = 0; across < NUM_ALIEN_COLUMNS; across++)
+  {
+    for (int down = 0; down < NUM_ALIEN_ROWS; down++)
     {
-        for (int down = 0; down < NUM_ALIEN_ROWS; down++)
-        {
-            Alien[across][down].Ord.X = X_START_OFFSET + (across * (LARGEST_ALIEN_WIDTH + SPACE_BETWEEN_ALIEN_COLUMNS)) - (AlienWidth[down] / 2);
-            Alien[across][down].Ord.Y = YStart + (down * SPACE_BETWEEN_ROWS);
-            Alien[across][down].Ord.Status = ACTIVE;
-            Alien[across][down].ExplosionGfxCounter = EXPLOSION_GFX_TIME;
-        }
+      Alien[across][down].Ord.X = X_START_OFFSET + (across * (LARGEST_ALIEN_WIDTH + SPACE_BETWEEN_ALIEN_COLUMNS)) - (AlienWidth[down] / 2);
+      Alien[across][down].Ord.Y = YStart + (down * SPACE_BETWEEN_ROWS);
+      Alien[across][down].Ord.Status = ACTIVE;
+      Alien[across][down].ExplosionGfxCounter = EXPLOSION_GFX_TIME;
     }
-    MotherShip.Ord.Y = 0;
-    MotherShip.Ord.X = -MOTHERSHIP_WIDTH;
-    MotherShip.Ord.Status = DESTROYED;
+  }
+  MotherShip.Ord.Y = 0;
+  MotherShip.Ord.X = -MOTHERSHIP_WIDTH;
+  MotherShip.Ord.Status = DESTROYED;
 }
 
 void SpaceInvaders::Physics()
@@ -320,6 +327,9 @@ void SpaceInvaders::AttractScreen()
     // if hiscore still 0 which it will be
     HiScore = 0;
     EEPROM.put(0, HiScore);
+#if defined(ESP8266) || defined(ESP32)
+    EEPROM.commit();
+#endif
   }
 }
 
@@ -440,9 +450,12 @@ void SpaceInvaders::AlienControl()
       {
         if (Alien[Across][Down].Ord.Status == ACTIVE)
         {
-          if (Dropped == false) {
+          if (Dropped == false)
+          {
             Alien[Across][Down].Ord.X += AlienXMoveAmount;
-          } else {
+          }
+          else
+          {
             Alien[Across][Down].Ord.Y += INVADERS_DROP_BY;
           }
         }
@@ -790,7 +803,8 @@ void SpaceInvaders::MissileAndAlienCollisions()
             // you will get an incorrect result
             Player.AlienSpeed = ((1 - (Player.AliensDestroyed / (float)TOTAL_ALIENS)) * INVADERS_SPEED);
             // for very last alien make to  fast!
-            if (Player.AliensDestroyed == TOTAL_ALIENS - 2) {
+            if (Player.AliensDestroyed == TOTAL_ALIENS - 2)
+            {
               if (AlienXMoveAmount > 0)
                 AlienXMoveAmount = ALIEN_X_MOVE_AMOUNT * 2;
               else
@@ -798,7 +812,8 @@ void SpaceInvaders::MissileAndAlienCollisions()
             }
 
             // for very last alien make to super fast!
-            if (Player.AliensDestroyed == TOTAL_ALIENS - 1) {
+            if (Player.AliensDestroyed == TOTAL_ALIENS - 1)
+            {
               if (AlienXMoveAmount > 0)
                 AlienXMoveAmount = ALIEN_X_MOVE_AMOUNT * 4;
               else
@@ -926,6 +941,9 @@ void SpaceInvaders::GameOver()
   {
     HiScore = Player.Score;
     EEPROM.put(0, HiScore);
+#if defined(ESP8266) || defined(ESP32)
+    EEPROM.commit();
+#endif
     PlayRewardMusic();
   }
   delay(2500);
@@ -939,7 +957,7 @@ void SpaceInvaders::PlayRewardMusic()
   {
     tone(PIN_BUZZER, Notes[i] * 10);
     delay(NoteDurations[i] * 10); // time note plays for
-    NO_TONE(PIN_BUZZER);                   // stop note
+    NO_TONE(PIN_BUZZER);          // stop note
     delay(20);                    // small delay between notes
   }
   NO_TONE(PIN_BUZZER);

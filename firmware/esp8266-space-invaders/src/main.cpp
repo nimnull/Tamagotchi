@@ -49,14 +49,3 @@ void loop()
   delay(FRAME_DELAY_MS);
   frame++;
 }
-
-// void loop() {
-//   Serial.print(".");
-//   tone(PIN_BUZZER, 1000, 1000);
-//   delay(2000);
-//   noTone(PIN_BUZZER);
-//   digitalWrite(PIN_BUZZER, HIGH);
-//   Serial.println(".");
-//   delay(1000);
-// }
-
