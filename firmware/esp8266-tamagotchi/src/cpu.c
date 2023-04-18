@@ -27,7 +27,7 @@
 #include "hal.h"
 #include "rom_12bit.h"
 
-#define CPU_SPEED_RATIO      0
+#define CPU_SPEED_RATIO       1
 #define TICK_FREQUENCY        32768 // Hz
 
 #define TIMER_1HZ_PERIOD      32768 // in ticks
@@ -204,7 +204,7 @@ static state_t cpu_state = {
 
   .interrupts = interrupts,
 
-  .memory = memory, 
+  .memory = memory,
 }; */
 
 
@@ -623,7 +623,7 @@ static void set_lcd(u12_t n, u4_t v)
 #define MEM_RAM_SIZE        0x280    // 640
 #define MEM_DISPLAY1_ADDR     0xE00  // 3584  0x280
 #define MEM_DISPLAY1_ADDR_OFS 0xB80
-#define MEM_DISPLAY1_SIZE     0x050  // 80    
+#define MEM_DISPLAY1_SIZE     0x050  // 80
 #define MEM_DISPLAY2_ADDR     0xE80  // 3712  0x2D0
 #define MEM_DISPLAY2_ADDR_OFS 0xBB0
 #define MEM_DISPLAY2_SIZE     0x050 // 80
@@ -640,7 +640,7 @@ u8_t cpu_get_max_number() {
 static u4_t get_memory(u12_t n)
 {
   u4_t res = 0;
-  
+
 
   if (n < MEM_RAM_SIZE) {
     /* RAM */
@@ -651,18 +651,18 @@ static u4_t get_memory(u12_t n)
     } else {
       res = memory[n>>1] & 0b00001111;
     }
-    
+
   } else if (n >= MEM_DISPLAY1_ADDR && n < (MEM_DISPLAY1_ADDR + MEM_DISPLAY1_SIZE)) {
     /* Display Memory 1 */
     //g_hal->log(LOG_MEMORY, "Display Memory 1 - ");
     //res = memory[n - MEM_DISPLAY1_ADDR_OFS];
-      res = 0;  
+      res = 0;
 
   } else if (n >= MEM_DISPLAY2_ADDR && n < (MEM_DISPLAY2_ADDR + MEM_DISPLAY2_SIZE)) {
     /* Display Memory 2 */
     //g_hal->log(LOG_MEMORY, "Display Memory 2 - ");
     //res = memory[n - MEM_DISPLAY2_ADDR_OFS];
-      res = 0;  
+      res = 0;
   } else if (n >= MEM_IO_ADDR && n < (MEM_IO_ADDR + MEM_IO_SIZE)) {
     /* I/O Memory */
     //g_hal->log(LOG_MEMORY, "I/O              - ");
@@ -715,10 +715,10 @@ void cpu_refresh_hw(void)
     u12_t addr;
     u12_t size;
   } refresh_locs[] = {
-    { MEM_DISPLAY1_ADDR, MEM_DISPLAY1_SIZE }, // Display Memory 1 
-    { MEM_DISPLAY2_ADDR, MEM_DISPLAY2_SIZE }, // Display Memory 2 
-    { REG_BUZZER_CTRL1, 1 }, // Buzzer frequency 
-    { REG_K40_K43_BZ_OUTPUT_PORT, 1 }, // Buzzer enabled 
+    { MEM_DISPLAY1_ADDR, MEM_DISPLAY1_SIZE }, // Display Memory 1
+    { MEM_DISPLAY2_ADDR, MEM_DISPLAY2_SIZE }, // Display Memory 2
+    { REG_BUZZER_CTRL1, 1 }, // Buzzer frequency
+    { REG_K40_K43_BZ_OUTPUT_PORT, 1 }, // Buzzer enabled
 
     { 0, 0 }, // end of list
   };
@@ -1655,7 +1655,7 @@ static const op_t0 ops0[] PROGMEM = {
   {0xEF0, MASK_8B   , 5 }, // LDPY_R
   {0xF00, MASK_8B   , 7 }, // CP_R_Q
   {0xF10, MASK_8B   , 7 }, // FAN_R_Q
-  
+
   {0xAF0, MASK_8B       , 7 }, // RLC
   {0xE8C, MASK_10B      , 5 }, // RRC
   {0xF60, MASK_8B       , 7 }, // INC_MN
@@ -1769,7 +1769,7 @@ static const op_t1 ops1[] PROGMEM = {
   {&op_ldpy_r_cb}, // LDPY_R
   {&op_cp_r_q_cb}, // CP_R_Q
   {&op_fan_r_q_cb}, // FAN_R_Q
-  
+
   {&op_rlc_cb}, // RLC
   {&op_rrc_cb}, // RRC
   {&op_inc_mn_cb}, // INC_MN
@@ -1781,11 +1781,11 @@ static const op_t1 ops1[] PROGMEM = {
   {&op_not_cb}, // NOT
   {NULL}
 };
-  
+
 u12_t getShiftArg0(u12_t code, u12_t mask) {
   if (mask==MASK_6B || mask==0xFCF) return 4;
   if (code==0xA80 || code==0xA90 || code==0xAA0  || code==0xAB0 || code==0xAC0 || code==0xAD0 || code==0xAE0 || code==0xEC0 || code==0xEE0 || code==0xEF0 || code==0xF00 || code==0xF10) return 2;
-  return 0;  
+  return 0;
 }
 
 u12_t getMaskArg0(u12_t shiftArg, u12_t mask) {
@@ -1861,7 +1861,7 @@ void cpu_reset(void)
   }
   /*for (i = 0; i < MEM_IO_SIZE; i++) {
     io_memory[i] = 0;
-  } */ 
+  } */
 
   //io_memory[REG_K40_K43_BZ_OUTPUT_PORT - MEM_IO_ADDR_OFS] = 0xF; // Output port (R40-R43)
   //io_memory[REG_LCD_CTRL - MEM_IO_ADDR_OFS] = 0x8; // LCD control
@@ -1887,7 +1887,7 @@ u12_t getProgramOpCode(u12_t pc) {
   u12_t i = pc >> 1;  // divided by 2
   if ((pc & 0x1)==0) {   // if pc is a even number
     return (pgm_read_byte_near(g_program_b12+i+i+i) << 4) | ((pgm_read_byte_near(g_program_b12+i+i+i+1) >> 4) & 0xF);
-  } 
+  }
   return (pgm_read_byte_near(g_program_b12+i+i+i+1) << 8) | pgm_read_byte_near(g_program_b12+i+i+i+2);
 }
 

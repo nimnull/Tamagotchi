@@ -38,12 +38,10 @@ hal_t *g_hal;
 
 
 bool_t tamalib_init(u32_t freq)
-//bool_t tamalib_init(breakpoint_t *breakpoints, u32_t freq)
 {
 	bool_t res = 0;
   res |= cpu_init( freq);
 
-//	res |= cpu_init(program, breakpoints, freq);
 	res |= hw_init();
 
 	ts_freq = freq;
@@ -63,14 +61,14 @@ void tamalib_set_framerate(u8_t framerate)
 {
 	g_framerate = framerate;
 }
-/*
-u8_t tamalib_get_framerate(void)
-{
- 
-	//return g_framerate;
-  return DEFAULT_FRAMERATE;
-}
-*/
+
+// u8_t tamalib_get_framerate(void)
+// {
+
+// 	return g_framerate;
+// //   return DEFAULT_FRAMERATE;
+// }
+
 void tamalib_register_hal(hal_t *hal)
 {
 	g_hal = hal;
@@ -125,7 +123,7 @@ void tamalib_step(void)
 				}
 				break;
 		}
-	} 
+	}
 }
 */
 /*
@@ -161,9 +159,8 @@ void tamalib_mainloop_step_by_step(void)
 
     /* Update the screen @ g_framerate fps */
     ts = g_hal->get_timestamp();
-    
+
     if (ts - screen_ts >= ts_freq/g_framerate) {
-    //if (ts - screen_ts >= ts_freq/DEFAULT_FRAMERATE) {
       screen_ts = ts;
       g_hal->update_screen();
     }

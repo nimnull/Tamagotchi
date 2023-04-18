@@ -70,7 +70,7 @@ typedef struct {
   u8_t prog_timer_rld;
   u32_t call_depth;
   u4_t *memory;
-  interrupt_t interrupts[6];  
+  interrupt_t interrupts[6];
  } cpu_state_t;
 
 /* Pins (TODO: add other pins) */
@@ -133,7 +133,7 @@ typedef struct {
 void cpu_add_bp(breakpoint_t **list, u13_t addr);
 void cpu_free_bp(breakpoint_t **list);
 
-//void cpu_set_speed(u8_t speed);
+void cpu_set_speed(u8_t speed);
 
 void cpu_get_state(cpu_state_t *cpustate);
 void cpu_set_state(cpu_state_t *cpustate);
@@ -148,9 +148,9 @@ void cpu_refresh_hw(void);
 
 void cpu_reset(void);
 
-//u8_t cpu_get_max_number(void);
+u8_t cpu_get_max_number(void);
 
-//bool_t cpu_init(breakpoint_t *breakpoints, u32_t freq);
+// bool_t cpu_init(breakpoint_t *breakpoints, u32_t freq);
 
 bool_t cpu_init(u32_t freq);
 void cpu_release(void);

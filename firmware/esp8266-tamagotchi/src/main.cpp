@@ -20,6 +20,7 @@
 
 #include <U8g2lib.h>
 #include <Wire.h>
+#include <esp32-hal-cpu.h>
 
 #include "tamalib.h"
 #include "hw.h"
@@ -29,57 +30,38 @@
 #endif
 
 /***** Set display orientation, U8G2_MIRROR_VERTICAL is not supported *****/
-//#define U8G2_LAYOUT_NORMAL
-#define U8G2_LAYOUT_ROTATE_180
-//#define U8G2_LAYOUT_MIRROR
+#define U8G2_LAYOUT_NORMAL
+// #define U8G2_LAYOUT_ROTATE_180
+// #define U8G2_LAYOUT_MIRROR
 /**************************************************************************/
 
 #ifdef U8G2_LAYOUT_NORMAL
-U8G2_SSD1306_128X64_NONAME_2_HW_I2C display(U8G2_R0);
+U8G2_SSD1306_128X64_NONAME_F_HW_I2C display(U8G2_R0, U8X8_PIN_NONE, GPIO_NUM_4, GPIO_NUM_5);
 #endif
 
 #ifdef U8G2_LAYOUT_ROTATE_180
-U8G2_SSD1306_128X64_NONAME_2_HW_I2C display(U8G2_R2);
+U8G2_SSD1306_128X64_NONAME_F_HW_I2C display(U8G2_R2, U8X8_PIN_NONE, GPIO_NUM_4, GPIO_NUM_5);
 #endif
 
 #ifdef U8G2_LAYOUT_MIRROR
-U8G2_SSD1306_128X64_NONAME_2_HW_I2C display(U8G2_MIRROR);
+U8G2_SSD1306_128X64_NONAME_F_HW_I2C display(U8G2_MIRROR, U8X8_PIN_NONE, GPIO_NUM_4, GPIO_NUM_5);
 #endif
 
-#if defined(ESP8266_KIT_A)
-#define PIN_BTN_L 12
-#define PIN_BTN_M 13
-#define PIN_BTN_R 15
-#define PIN_BUZZER 2
-#elif defined(ESP8266_KIT_B)
-#define PIN_BTN_L 12
-#define PIN_BTN_M 13
-#define PIN_BTN_R 15
+#define PIN_BTN_L GPIO_NUM_14
+#define PIN_BTN_M GPIO_NUM_13
+#define PIN_BTN_R GPIO_NUM_12
 #define PIN_BUZZER 0
-#define ENABLE_TAMA_SOUND
-#define ENABLE_TAMA_SOUND_ACTIVE_LOW
-#elif defined(ESP32)
-#define PIN_BTN_L 255
-#define PIN_BTN_M 255
-#define PIN_BTN_R 255
-#define PIN_BUZZER 255
-#else
-#define PIN_BTN_L 2
-#define PIN_BTN_M 3
-#define PIN_BTN_R 4
-#define PIN_BUZZER 9
-#endif
-
-void displayTama();
 
 /**** TamaLib Specific Variables ****/
 static uint16_t current_freq = 0;
 static bool_t matrix_buffer[LCD_HEIGHT][LCD_WIDTH / 8] = {{0}};
-//static byte runOnceBool = 0;
+// static byte runOnceBool = 0;
 static bool_t icon_buffer[ICON_NUM] = {0};
 static cpu_state_t cpuState;
 static unsigned long lastSaveTimestamp = 0;
 /************************************/
+
+void displayTama();
 
 static void hal_halt(void)
 {
@@ -91,18 +73,19 @@ static void hal_log(log_level_t level, char *buff, ...)
   Serial.println(buff);
 }
 
-static void hal_sleep_until(timestamp_t ts)
-{
-  // int32_t remaining = (int32_t) (ts - hal_get_timestamp());
-  // if (remaining > 0) {
-  // delayMicroseconds(1);
-  // delay(1);
-  //}
-}
-
 static timestamp_t hal_get_timestamp(void)
 {
   return millis() * 1000;
+}
+
+static void hal_sleep_until(timestamp_t ts)
+{
+  int32_t remaining = (int32_t)(ts - hal_get_timestamp());
+  if (remaining > 0)
+  {
+    // delayMicroseconds(1);
+    delay(1);
+  }
 }
 
 static void hal_update_screen(void)
@@ -149,9 +132,9 @@ static void hal_play_frequency(bool_t en)
   else
   {
     noTone(PIN_BUZZER);
-    #ifdef ENABLE_TAMA_SOUND_ACTIVE_LOW
+#ifdef ENABLE_TAMA_SOUND_ACTIVE_LOW
     digitalWrite(PIN_BUZZER, HIGH);
-    #endif
+#endif
   }
 #endif
 }
@@ -199,6 +182,7 @@ static int hal_handler(void)
   {
     hw_set_button(BTN_LEFT, BTN_STATE_RELEASED);
   }
+
   if (digitalRead(PIN_BTN_M) == HIGH)
   {
     hw_set_button(BTN_MIDDLE, BTN_STATE_PRESSED);
@@ -207,6 +191,7 @@ static int hal_handler(void)
   {
     hw_set_button(BTN_MIDDLE, BTN_STATE_RELEASED);
   }
+
   if (digitalRead(PIN_BTN_R) == HIGH)
   {
     hw_set_button(BTN_RIGHT, BTN_STATE_PRESSED);
@@ -271,32 +256,30 @@ void drawTamaRow(uint8_t tamaLCD_y, uint8_t ActualLCD_y, uint8_t thick)
 void drawTamaSelection(uint8_t y)
 {
   uint8_t i;
-  for (i = 0; i < 7; i++)
+  for (i = 0; i < 8; i++)
   {
     if (icon_buffer[i])
       drawTriangle(i * 16 + 5, y);
     display.drawXBMP(i * 16 + 4, y + 6, 16, 9, bitmaps + i * 18);
   }
-  if (icon_buffer[7])
-  {
-    drawTriangle(7 * 16 + 5, y);
-    display.drawXBMP(7 * 16 + 4, y + 6, 16, 9, bitmaps + 7 * 18);
-  }
+  // if (icon_buffer[7])
+  // {
+  //   drawTriangle(7 * 16 + 5, y);
+  //   display.drawXBMP(7 * 16 + 4, y + 6, 16, 9, bitmaps + 7 * 18);
+  // }
 }
 
 void displayTama()
 {
   uint8_t j;
-  display.firstPage();
+  display.clearBuffer();
 #ifdef U8G2_LAYOUT_ROTATE_180
   drawTamaSelection(49);
-  display.nextPage();
 
   for (j = 11; j < LCD_HEIGHT; j++)
   {
     drawTamaRow(j, j + j + j, 2);
   }
-  display.nextPage();
 
   for (j = 5; j <= 10; j++)
   {
@@ -309,7 +292,6 @@ void displayTama()
       drawTamaRow(j, j + j + j, 2);
     }
   }
-  display.nextPage();
 
   for (j = 0; j <= 5; j++)
   {
@@ -322,25 +304,20 @@ void displayTama()
       drawTamaRow(j, j + j + j, 2);
     }
   }
-  display.nextPage();
 #else
   for (j = 0; j < LCD_HEIGHT; j++)
   {
     if (j != 5)
-      drawTamaRow(j, j + j + j, 2);
+      drawTamaRow(j, j * 3, 2);
     if (j == 5)
     {
-      drawTamaRow(j, j + j + j, 1);
-      display.nextPage();
-      drawTamaRow(j, j + j + j + 1, 1);
+      drawTamaRow(j, j * 3, 1);
+      drawTamaRow(j, j * 3 + 1, 1);
     }
-    if (j == 10)
-      display.nextPage();
   }
-  display.nextPage();
   drawTamaSelection(49);
-  display.nextPage();
 #endif
+  display.sendBuffer();
 }
 
 #ifdef ENABLE_DUMP_STATE_TO_SERIAL_WHEN_START
@@ -396,25 +373,26 @@ uint8_t reverseBits(uint8_t num)
 void setup()
 {
   Serial.begin(SERIAL_BAUD);
-
   pinMode(PIN_BTN_L, INPUT);
   pinMode(PIN_BTN_M, INPUT);
   pinMode(PIN_BTN_R, INPUT);
-  pinMode(PIN_BUZZER, OUTPUT);
+  // pinMode(PIN_BUZZER, OUTPUT);
 
   display.begin();
 
   tamalib_register_hal(&hal);
   tamalib_set_framerate(TAMA_DISPLAY_FRAMERATE);
+  setCpuFrequencyMhz(80); // Set CPU clock to 80MHz fo example
   tamalib_init(1000000);
 
-  initEEPROM();
-
 #ifdef ENABLE_LOAD_STATE_FROM_EEPROM
+  initEEPROM();
   if (validEEPROM())
   {
     loadStateFromEEPROM(&cpuState);
-  } else {
+  }
+  else
+  {
     Serial.println(F("No magic number in state, skipping state restore"));
   }
 #elif ENABLE_LOAD_HARCODED_STATE_WHEN_START
@@ -438,15 +416,18 @@ void loop()
     saveStateToEEPROM(&cpuState);
   }
 
-  if (digitalRead(PIN_BTN_M) == HIGH) {
-    if (millis() - right_long_press_started > AUTO_SAVE_MINUTES * 1000) 
+  if (digitalRead(PIN_BTN_M) == HIGH)
+  {
+    if (millis() - right_long_press_started > AUTO_SAVE_MINUTES * 1000)
     {
       eraseStateFromEEPROM();
-      #if defined(ESP8266) || defined(ESP32)
+#if defined(ESP8266) || defined(ESP32)
       ESP.restart();
-      #endif
+#endif
     }
-  } else {
+  }
+  else
+  {
     right_long_press_started = millis();
   }
 #endif
